@@ -75,6 +75,8 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
 .flash{position:fixed;inset:0;background:#FFF1D6;pointer-events:none;opacity:0}
 .err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:18px}
 @media (max-width:640px){.panel{right:12px;left:12px;bottom:12px;width:auto;padding:18px;gap:10px;border-radius:20px}.panel h2{font-size:28px}.panel p{font-size:15px}.list li{padding:8px 0;font-size:15px}.price{font-size:52px}.intro{bottom:20px}.intro h1{font-size:32px}.exit{top:72px;left:12px;right:auto;bottom:auto;padding:9px 14px;font-size:14px}}
+.chips{display:none}
+@media (max-aspect-ratio:1/1){.intro{right:0;left:0;max-width:none;padding:0 18px;box-sizing:border-box}.chips{display:flex;gap:8px;overflow-x:auto;pointer-events:auto;margin:0 -18px;padding:2px 18px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{all:unset;flex:none;cursor:pointer;padding:10px 15px;border-radius:999px;background:rgba(255,255,255,.95);color:#114255;font-size:14px;font-weight:500;white-space:nowrap}}
 @media (pointer:coarse){.hs{width:44px;height:44px;margin:-22px 0 0 -22px}.hs::before{inset:16px}.hs::after{inset:10px}.tip{display:none}}
 </style>
 </head>
@@ -89,6 +91,7 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
   <div class="intro fade" id="intro">
     <h1>Des sites qui font venir des clients.</h1>
     <p>Bienvenue dans mon atelier à Aurillac. Cliquez sur les objets du bureau.</p>
+    <div class="chips" id="chips"></div>
   </div>
   <div class="live" id="live"><img id="liveImg" alt=""></div>
   <div id="hss"></div>
@@ -534,6 +537,11 @@ picks.forEach(p => {
   b.addEventListener('pointerenter', () => showTip(p.label, b)); b.addEventListener('pointerleave', hideTip);
   $('hss').appendChild(b); p.hs = b;
 });
+picks.filter(p => p.kind === 'case' || p.kind === 'offer' || p.kind === 'call').forEach(p => {
+  const c = document.createElement('button'); c.className = 'chip'; c.type = 'button'; c.textContent = p.label;
+  c.addEventListener('click', () => activate(p));
+  $('chips').appendChild(c);
+});
 const tipEl = $('tip');
 function showTip(text, el, x, y) { tipEl.textContent = text; if (el) { const r = el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top; } tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px'; tipEl.style.opacity = 1; }
 function hideTip() { tipEl.style.opacity = 0; }
@@ -541,10 +549,10 @@ function hideTip() { tipEl.style.opacity = 0; }
 // CAMERA + TWEENS
 const VIEWS = {
   close: { p: new THREE.Vector3(.04, .9, .12), l: new THREE.Vector3(.04, .885, -.245) },
-  desk: { p: new THREE.Vector3(0, 1.3, 1.42), l: new THREE.Vector3(0, .9, -.12) },
-  case: { p: new THREE.Vector3(.02, 1.04, .66), l: new THREE.Vector3(.0, .845, -.2) },
-  offer: { p: new THREE.Vector3(.12, 1.16, .92), l: new THREE.Vector3(.18, .8, .14) },
-  call: { p: new THREE.Vector3(.38, 1.12, .78), l: new THREE.Vector3(.46, .78, .2) }
+  desk: { p: new THREE.Vector3(0, 1.3, 1.42), l: new THREE.Vector3(0, .9, -.12), w: .82 },
+  case: { p: new THREE.Vector3(.02, 1.04, .66), l: new THREE.Vector3(.0, .845, -.2), w: .34 },
+  offer: { p: new THREE.Vector3(.12, 1.16, .92), l: new THREE.Vector3(.18, .8, .14), w: .5 },
+  call: { p: new THREE.Vector3(.38, 1.12, .78), l: new THREE.Vector3(.46, .78, .2), w: .42 }
 };
 const cam = { p: VIEWS.close.p.clone(), l: VIEWS.close.l.clone() };
 const tweens = [];
@@ -552,7 +560,9 @@ const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const eo = t => 1 - Math.pow(1 - t, 3);
 function tween(dur, fn, ease = eio) { return new Promise(res => tweens.push({ t0: performance.now(), dur, fn, ease, res })); }
 function fit(v) {
-  const a = innerWidth / innerHeight, f = Math.max(1, 1.5 / a);
+  const a = innerWidth / innerHeight;
+  // portrait: frame the width that matters (v.w) instead of backing up to fit the whole desk
+  const f = a < 1 && v.w ? v.w / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * a * v.p.distanceTo(v.l)) : Math.max(1, 1.5 / a);
   return { p: v.l.clone().add(v.p.clone().sub(v.l).multiplyScalar(f)), l: v.l.clone() };
 }
 let camTweenId = 0;
@@ -650,6 +660,7 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && mode !== 'intro' &&
 // POINTER
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 let hovered = null, mx = 0, my = 0, smx = 0, smy = 0, downXY = null;
+const PAN_MAX = .34; let panT = 0, pan = 0, panFrom = 0, panning = false;
 function pickAt(cx, cy) {
   ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
@@ -665,7 +676,12 @@ glc.addEventListener('pointermove', e => {
   if (p) showTip(p.label, null, e.clientX, e.clientY - 8); else hideTip();
 });
 glc.addEventListener('pointerleave', () => { hovered = null; hideTip(); });
-glc.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; });
+glc.addEventListener('pointerdown', e => { downXY = [e.clientX, e.clientY]; panFrom = panT; panning = true; });
+glc.addEventListener('pointermove', e => {
+  if (!panning || mode !== 'desk' || innerWidth >= innerHeight) return;
+  panT = Math.max(-PAN_MAX, Math.min(PAN_MAX, panFrom - (e.clientX - downXY[0]) / innerWidth * VIEWS.desk.w));
+});
+['pointerup', 'pointercancel'].forEach(t => addEventListener(t, () => { panning = false; }));
 glc.addEventListener('pointerup', e => {
   if (!downXY || Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]) > 8) return;
   const p = pickAt(e.clientX, e.clientY);
@@ -718,6 +734,7 @@ if (EMBED) {
   $('intro').querySelector('h1').textContent = 'Mon atelier, à Aurillac.';
   $('intro').querySelector('p').textContent = 'Cliquez sur les objets du bureau.';
 }
+if (innerWidth < innerHeight) $('intro').querySelector('p').textContent = 'Glissez pour explorer, ou touchez un objet.';
 window.__shot = () => { mode = 'desk'; curView = 'desk'; const v = fit(VIEWS.desk); cam.p.copy(v.p); cam.l.copy(v.l); env.night = 1; env.lamp = 1; isNight = true; applyEnv(); setScreen(drawHome, true); ui.style.display = 'none'; document.querySelector('.shade').style.display = 'none'; $('boot').style.display = 'none'; renderer.shadowMap.needsUpdate = true; setTimeout(() => { stepScreen(1000); renderer.shadowMap.needsUpdate = true; camera.position.copy(cam.p); camera.lookAt(cam.l); renderer.render(scene, camera); const im = new Image(); im.src = renderer.domElement.toDataURL('image/jpeg', .9); im.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:99'; document.body.appendChild(im); }, 400); };
 
 // INTRO
@@ -762,8 +779,10 @@ renderer.setAnimationLoop(now => {
 
   smx += (mx - smx) * .05; smy += (my - smy) * .05;
   const par = mode === 'intro' ? 0 : 1;
-  camera.position.set(cam.p.x + smx * .06 * par, cam.p.y - smy * .035 * par, cam.p.z);
-  camera.lookAt(cam.l);
+  if (mode !== 'desk') panT = 0;
+  pan += (panT - pan) * .12;
+  camera.position.set(cam.p.x + pan + smx * .06 * par, cam.p.y - smy * .035 * par, cam.p.z);
+  camera.lookAt(cam.l.x + pan, cam.l.y, cam.l.z);
 
   picks.forEach(p => {
     const target = (hovered === p && p.state === 'home') ? 1 : 0;
