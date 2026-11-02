@@ -324,6 +324,7 @@ input::placeholder{color:rgba(17,66,85,.45)}
             <form onSubmit="{{ onSubmit }}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;">
               <input required="required" name="nom" placeholder="Votre nom" style="background:#fff;border:1.5px solid rgba(17,66,85,.22);border-radius:16px;color:#114255;font-size:17px;padding:15px 18px;outline:none;font-family:inherit;" style-focus="border-color:#114255;">
               <input required="required" name="tel" type="tel" placeholder="Votre téléphone" style="background:#fff;border:1.5px solid rgba(17,66,85,.22);border-radius:16px;color:#114255;font-size:17px;padding:15px 18px;outline:none;font-family:inherit;" style-focus="border-color:#114255;">
+              <input name="_site" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
               <input name="ville" placeholder="Votre commune" style="background:#fff;border:1.5px solid rgba(17,66,85,.22);border-radius:16px;color:#114255;font-size:17px;padding:15px 18px;outline:none;font-family:inherit;" style-focus="border-color:#114255;">
               <textarea name="message" rows="3" placeholder="Un mot sur votre projet (facultatif)" style="background:#fff;border:1.5px solid rgba(17,66,85,.22);border-radius:16px;color:#114255;font-size:17px;padding:15px 18px;outline:none;font-family:inherit;grid-column:1 / -1;resize:vertical;" style-focus="border-color:#114255;"></textarea>
               <p style="grid-column:1 / -1;margin:0;font-size:14px;line-height:1.45;color:#4F6E7A;">Vos coordonnées servent uniquement à vous recontacter. <a href="confidentialite.html" style="text-decoration:underline;">En savoir plus</a>.</p>
@@ -715,16 +716,17 @@ class Component extends DCLogic {
         const fd = new FormData(e.target);
         const to = (this.props.email || '').trim();
         const lines = STEPS.filter(x => !x.form).map(x => { const v = ans[x.k]; return x.q + ' ' + (Array.isArray(v) ? v.join(', ') : (v || '—')); });
-        const payload = { _subject: 'Nouvelle demande Neovia — ' + (fd.get('nom') || ''), _template: 'table', _captcha: 'false', Nom: fd.get('nom'), Téléphone: fd.get('tel'), Commune: fd.get('ville'), Message: fd.get('message'), Activité: ans.metier || '', 'Site existant': ans.site || '', Besoins: (ans.besoins || []).join(', '), Délai: ans.quand || '' };
+        const payload = { _subject: 'Nouvelle demande Neovia — ' + (fd.get('nom') || ''), _site: fd.get('_site') || '', nom: fd.get('nom'), tel: fd.get('tel'), ville: fd.get('ville'), message: fd.get('message'), activite: ans.metier || '', site: ans.site || '', besoins: (ans.besoins || []).join(', '), delai: ans.quand || '' };
         if (!to) {
           const body = ['Nom : ' + fd.get('nom'), 'Téléphone : ' + fd.get('tel'), 'Commune : ' + (fd.get('ville') || ''), '', ...lines, '', fd.get('message') || ''].join('\n');
           location.href = 'mailto:?subject=' + encodeURIComponent(payload._subject) + '&body=' + encodeURIComponent(body);
           this.setState({ sent: true }); return;
         }
         this.setState({ sending: true, err: '' });
-        fetch('https://formsubmit.co/ajax/' + encodeURIComponent(to), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(payload) })
+        const abort = new AbortController(); const sendTimer = setTimeout(() => abort.abort(), 20000);
+        fetch('contact.php', { method: 'POST', signal: abort.signal, headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(payload) })
           .then(r => r.json().catch(() => ({})).then(j => { if (!r.ok || j.success === 'false' || j.success === false) throw new Error(j.message || 'Erreur'); }))
-          .then(() => this.setState({ sent: true, sending: false }))
+          .then(() => { clearTimeout(sendTimer); this.setState({ sent: true, sending: false }); })
           .catch(() => this.setState({ sending: false, err: 'L’envoi n’a pas marché. Appelez-moi directement au 06 65 71 12 43.' }));
       }
     };
