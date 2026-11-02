@@ -3,23 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Neovia — L’atelier</title>
+<title>L’atelier 3D de Neovia, création de sites à Aurillac</title>
+<meta name="description" content="Visitez en 3D l’atelier de Neovia à Aurillac : découvrez mes réalisations, l’offre de création de site internet, ou appelez-moi.">
+<link rel="canonical" href="https://neoviaweb.fr/atelier.html">
+<link rel="icon" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&display=swap" rel="stylesheet">
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
-    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
-    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
-    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "./vendor/three/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "./vendor/three/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "./vendor/three/examples/jsm/exporters/GLTFExporter.js"
   },
   "integrity": {
-    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
-    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
-    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
-    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
-    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+    "./vendor/three/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "./vendor/three/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "./vendor/three/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "./vendor/three/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "./vendor/three/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
   }
 }
 </script>
@@ -80,7 +83,7 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
 <div class="shade"></div>
 <div class="ui" id="ui">
   <nav class="top fade">
-    <a class="brand" href="#"><img src="assets/neovia-logo-blanc.png" alt=""><span>Neovia</span></a>
+    <a class="brand" href="#"><img src="assets/neovia-logo-blanc.webp" alt=""><span>Neovia</span></a>
     <a class="pill" href="tel:+33665711243"><i class="dot"></i>06 65 71 12 43</a>
   </nav>
   <div class="intro fade" id="intro">
@@ -126,7 +129,7 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
   </div>
 </div>
 <div class="flash" id="flash"></div>
-<div class="boot" id="boot"><img src="assets/neovia-logo-blanc.png" alt=""></div>
+<div class="boot" id="boot"><img src="assets/neovia-logo-blanc.webp" alt=""></div>
 <div class="err" id="err">Votre navigateur n’affiche pas la 3D. Appelez-moi : <a href="tel:+33665711243">&nbsp;06 65 71 12 43</a></div>
 
 <script type="module">
@@ -285,12 +288,12 @@ const scr = { cv: cv(SC.w, SC.h), a: cv(SC.w, SC.h), b: cv(SC.w, SC.h), t: 1, no
 scr.ctx = scr.cv.getContext('2d'); scr.tex = ctex(scr.cv);
 const CELL = 32, COLS = Math.ceil(SC.w / CELL), ROWS = Math.ceil(SC.h / CELL);
 { const r = rng(9); for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) scr.noise.push(r() * .55 + (x / COLS) * .45); }
-const logoImg = new Image(); logoImg.src = 'assets/neovia-logo-blanc.png';
+const logoImg = new Image(); logoImg.src = 'assets/neovia-logo-blanc.webp';
 const CASES = [
-  { key: 'cake', name: 'Cake’Ma', job: 'Gâteaux de mariage — Aurillac', src: 'assets/cakema.png', url: 'https://cakema.fr/' },
-  { key: 'pop', name: 'POP COM’15', job: 'Communication & réseaux sociaux — Cantal', src: 'assets/popcom15.png', url: 'https://popcom15.fr/' },
-  { key: 'paint', name: 'Arthur Richard', job: 'Peintre & second œuvre — Nevers', src: 'assets/arthur-richard.png', url: 'https://entreprise-arthur-richard.fr/' },
-  { key: 'fid', name: 'fidèle.', job: 'Ma carte de fidélité digitale pour commerçants', src: 'assets/fidele.png', url: 'https://hellofidele.fr/' }
+  { key: 'cake', name: 'Cake’Ma', job: 'Gâteaux de mariage — Aurillac', src: 'assets/cakema.webp', url: 'https://cakema.fr/' },
+  { key: 'pop', name: 'POP COM’15', job: 'Communication & réseaux sociaux — Cantal', src: 'assets/popcom15.webp', url: 'https://popcom15.fr/' },
+  { key: 'paint', name: 'Arthur Richard', job: 'Peintre & second œuvre — Nevers', src: 'assets/arthur-richard.webp', url: 'https://entreprise-arthur-richard.fr/' },
+  { key: 'fid', name: 'fidèle.', job: 'Ma carte de fidélité digitale pour commerçants', src: 'assets/fidele.webp', url: 'https://hellofidele.fr/' }
 ];
 CASES.forEach(c => { c.img = new Image(); c.img.src = c.src; });
 function drawBoot(x, p) {
