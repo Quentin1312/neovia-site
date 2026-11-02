@@ -1,0 +1,23 @@
+Neovia — fichiers du site
+
+Contenu :
+- index.html      la page d'accueil (le site)
+- atelier.html    l'atelier 3D (ouvert depuis la porte ou l'interrupteur Bureau)
+- porte.html      la porte 3D de la section atelier
+- support.js      le moteur de la page, obligatoire
+- assets/         images et logos
+
+Mise en ligne :
+1. Envoyez TOUT le contenu de ce dossier à la racine de votre hébergement
+   (chez OVH : dossier "www" via le FTP ou le gestionnaire de fichiers).
+   Gardez exactement les mêmes noms et la même organisation.
+2. Ouvrez votre nom de domaine : index.html s'affiche automatiquement.
+3. Le site doit être servi en https (activez le certificat SSL gratuit chez OVH).
+
+Questionnaire de contact :
+- Les demandes partent vers quentincarriere1312@gmail.com via FormSubmit.
+- À la première demande reçue, FormSubmit envoie un mail d'activation :
+  cliquez une fois sur le lien, ensuite tout arrive normalement.
+
+Le site charge des polices Google et la 3D (three.js) depuis Internet :
+il faut une connexion, ce qui est toujours le cas une fois en ligne.

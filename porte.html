@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neovia — La porte de l’atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#fff;overflow:hidden;font-family:'Geist',system-ui,sans-serif;color:#114255;-webkit-font-smoothing:antialiased}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+.tip{position:fixed;left:0;top:0;padding:8px 14px;border-radius:999px;background:#114255;color:#fff;font-size:14px;font-weight:500;white-space:nowrap;pointer-events:none;opacity:0;transform:translate(-50%,-150%);transition:opacity .2s}
+.flash{position:fixed;inset:0;background:#FFF6EA;opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="tip" id="tip">Ouvrir</div>
+<div class="flash" id="flash"></div>
+<script type="module">
+import * as THREE from 'three';
+const $ = id => document.getElementById(id);
+const LITE = matchMedia('(pointer:coarse)').matches || innerWidth < 760;
+const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true });
+renderer.setPixelRatio(Math.min(LITE ? 1 : 1.25, devicePixelRatio));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#FFFFFF');
+const camera = new THREE.PerspectiveCamera(30, 1, .05, 40);
+const cv = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+function mk(g, m, parent, name) { const o = new THREE.Mesh(g, m); o.castShadow = true; o.receiveShadow = true; if (name) o.name = name; (parent || scene).add(o); return o; }
+const box = (w, h, d, m, x, y, z, parent, name) => { const o = mk(new THREE.BoxGeometry(w, h, d), m, parent, name); o.position.set(x, y, z); return o; };
+
+const M = {
+  frame: new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: .5, name: 'frame' }),
+  door: new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: .4, name: 'door' }),
+  brass: new THREE.MeshStandardMaterial({ color: '#C9A45C', roughness: .22, metalness: .95, name: 'brass' })
+};
+const DW = .92, DH = 2.1, OW = DW + .02, OH = DH + .02, FD = .14, CW = .09;
+
+// floor: shadows only, background stays pure white
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: .1 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+// warm room behind the opening (hidden while the door is closed)
+const inC = cv(512, 1024), ix = inC.getContext('2d'), ig = ix.createRadialGradient(256, 420, 0, 256, 420, 640);
+ig.addColorStop(0, '#FFF7EA'); ig.addColorStop(.45, '#F7D9AE'); ig.addColorStop(1, '#C99562'); ix.fillStyle = ig; ix.fillRect(0, 0, 512, 1024);
+const inT = new THREE.CanvasTexture(inC); inT.colorSpace = THREE.SRGBColorSpace;
+const interiorMat = new THREE.MeshBasicMaterial({ map: inT, toneMapped: false, color: new THREE.Color(.6, .6, .6) });
+const RD = 1.5;
+const interior = new THREE.Mesh(new THREE.PlaneGeometry(OW, OH), interiorMat); interior.position.set(0, OH / 2, -RD + .02); scene.add(interior);
+const roomMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#C99A6A').multiplyScalar(.6), toneMapped: false, side: THREE.BackSide });
+const room = new THREE.Mesh(new THREE.BoxGeometry(OW - .01, OH - .01, RD), roomMat); room.position.set(0, OH / 2 + .004, -RD / 2 - .01); scene.add(room);
+const roomBase = new THREE.Color('#C99A6A');
+
+// freestanding frame
+box(CW, OH + CW, FD, M.frame, -OW / 2 - CW / 2, (OH + CW) / 2, -FD / 2 + .02, scene, 'frame-left');
+box(CW, OH + CW, FD, M.frame, OW / 2 + CW / 2, (OH + CW) / 2, -FD / 2 + .02, scene, 'frame-right');
+box(OW + CW * 2, CW, FD, M.frame, 0, OH + CW / 2, -FD / 2 + .02, scene, 'frame-head');
+
+// door (opens toward the visitor)
+const hinge = new THREE.Group(); hinge.position.set(-DW / 2, 0, -.03); scene.add(hinge);
+const door = new THREE.Group(); hinge.add(door);
+box(DW, DH, .045, M.door, DW / 2, .012 + DH / 2, 0, door, 'slab');
+const mold = (x0, y0, x1, y1) => {
+  const t = .014, z = .0225 + t / 2;
+  [[x0, y0, x1, y0 + t], [x0, y1 - t, x1, y1], [x0, y0, x0 + t, y1], [x1 - t, y0, x1, y1]].forEach(([a, b, c, d]) => box(c - a, d - b, t, M.door, (a + c) / 2, (b + d) / 2, z, door, 'molding'));
+};
+mold(.11, 1.2, DW - .11, 1.98); mold(.11, .14, DW - .11, 1.04);
+const hb = new THREE.Group(); hb.position.set(DW - .085, 1.0, .0225); door.add(hb);
+const rose = mk(new THREE.CylinderGeometry(.026, .026, .01, 36), M.brass, hb, 'rose'); rose.rotation.x = Math.PI / 2; rose.position.z = .005;
+const lever = new THREE.Group(); lever.position.z = .01; hb.add(lever);
+const neck = mk(new THREE.CylinderGeometry(.008, .008, .04, 18), M.brass, lever, 'neck'); neck.rotation.x = Math.PI / 2; neck.position.z = .018;
+const arm = mk(new THREE.CylinderGeometry(.008, .008, .11, 18), M.brass, lever, 'lever'); arm.rotation.z = Math.PI / 2; arm.position.set(-.05, 0, .038);
+
+// warm floor spill (only when opening)
+const spC = cv(256, 256), spx = spC.getContext('2d'), spg = spx.createRadialGradient(128, 0, 0, 128, 0, 220);
+spg.addColorStop(0, 'rgba(255,200,130,.85)'); spg.addColorStop(1, 'rgba(255,200,130,0)'); spx.fillStyle = spg; spx.fillRect(0, 0, 256, 256);
+const spill = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(spC), transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+spill.rotation.x = -Math.PI / 2; spill.position.set(0, .002, .55); scene.add(spill);
+
+// lights
+scene.add(new THREE.HemisphereLight('#FFFFFF', '#EDEDED', 2.0));
+const key = new THREE.DirectionalLight('#FFFFFF', 2.0); key.position.set(-2.6, 4.2, 3.4); key.castShadow = true;
+key.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); Object.assign(key.shadow.camera, { left: -2.5, right: 2.5, top: 3, bottom: -1.5, near: .5, far: 12 });
+key.shadow.bias = -.001; key.shadow.normalBias = .03; key.shadow.radius = 6;
+scene.add(key);
+
+// camera
+const look = new THREE.Vector3(0, 1.12, 0), camPos = new THREE.Vector3(), camLook = look.clone();
+let state = 'idle';
+function frame() {
+  const w = innerWidth, h = innerHeight, a = w / h; renderer.setSize(w, h, false); camera.aspect = a; camera.updateProjectionMatrix();
+  const tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  if (state === 'idle') { camPos.set(0, 1.25, Math.max(1.45 / tn, .95 / (tn * a))); camLook.copy(look); }
+}
+addEventListener('resize', frame); frame();
+
+// tweens
+const tweens = []; const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const tween = (dur, fn, ease = eio) => new Promise(res => tweens.push({ t0: performance.now(), dur, fn, ease, res }));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let ajar = 0;
+
+async function enter() {
+  if (state !== 'idle') return; state = 'opening';
+  $('tip').style.opacity = 0; document.body.style.cursor = 'default';
+  await tween(260, k => { lever.rotation.z = .5 * k; });
+  const a0 = hinge.rotation.y, p0 = camPos.clone(), l0 = camLook.clone();
+  tween(1700, k => { hinge.rotation.y = a0 + (1.6 - a0) * k; interiorMat.color.setScalar(.6 + .6 * k); roomMat.color.copy(roomBase).multiplyScalar(.6 + .55 * k); spill.material.opacity = .55 * k; });
+  tween(260, k => { lever.rotation.z = .5 * (1 - k); });
+  await wait(700);
+  const p1 = new THREE.Vector3(.08, 1.15, -.7), l1 = new THREE.Vector3(.08, 1.1, -3);
+  tween(1800, k => { camPos.lerpVectors(p0, p1, k); camLook.lerpVectors(l0, l1, k); });
+  await wait(1150);
+  await tween(600, k => { $('flash').style.opacity = k; }, t => t * t);
+  parent.postMessage('neovia:enter', '*');
+  state = 'done';
+}
+function reset() {
+  state = 'idle'; tweens.length = 0; hinge.rotation.y = 0; lever.rotation.z = 0; ajar = 0;
+  interiorMat.color.setScalar(.6); roomMat.color.copy(roomBase).multiplyScalar(.6); spill.material.opacity = 0; $('flash').style.opacity = 0;
+  frame(); renderer.shadowMap.needsUpdate = true;
+}
+let running = true, last = performance.now();
+addEventListener('message', e => {
+  if (e.data === 'neovia:reset') reset();
+  if (e.data === 'neovia:pause' && running) { running = false; renderer.setAnimationLoop(null); }
+  if (e.data === 'neovia:play' && !running) { running = true; last = performance.now(); renderer.setAnimationLoop(loop); }
+});
+
+// pointer
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); const hits = []; door.traverse(o => o.isMesh && hits.push(o));
+let mx = 0, my = 0, smx = 0, smy = 0, hover = false;
+const hitDoor = (cx, cy) => { ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); return ray.intersectObjects(hits, false).length > 0; };
+addEventListener('pointermove', e => {
+  mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5;
+  if (state !== 'idle') return;
+  hover = hitDoor(e.clientX, e.clientY);
+  document.body.style.cursor = hover ? 'pointer' : 'default';
+  const tip = $('tip'); tip.style.opacity = hover && e.pointerType !== 'touch' ? 1 : 0; tip.style.left = e.clientX + 'px'; tip.style.top = (e.clientY - 6) + 'px';
+});
+addEventListener('pointerleave', () => { hover = false; $('tip').style.opacity = 0; });
+addEventListener('click', e => { if (state === 'idle' && (LITE || hitDoor(e.clientX, e.clientY))) enter(); });
+
+function loop(now) {
+  const dt = Math.min(50, now - last); last = now;
+  for (let i = tweens.length - 1; i >= 0; i--) { const tw = tweens[i], k = Math.min(1, (now - tw.t0) / tw.dur); tw.fn(tw.ease(k)); if (k >= 1) { tweens.splice(i, 1); tw.res(); } }
+  smx += (mx - smx) * .05; smy += (my - smy) * .05;
+  if (state === 'idle') {
+    const prev = ajar;
+    ajar += ((hover ? .07 : 0) - ajar) * .08;
+    hinge.rotation.y = ajar;
+    interiorMat.color.setScalar(.6 + ajar * 4); roomMat.color.copy(roomBase).multiplyScalar(.6 + ajar * 3);
+    spill.material.opacity = ajar * 3;
+    if (Math.abs(ajar - prev) > .002) renderer.shadowMap.needsUpdate = true; if (!hover && Math.abs(ajar) < .001) { ajar = 0; hinge.rotation.y = 0; }
+  }
+  const par = state === 'idle' ? 1 : .2;
+  camera.position.set(camPos.x + smx * .45 * par, camPos.y - smy * .2 * par, camPos.z);
+  camera.lookAt(camLook);
+  if (tweens.length) renderer.shadowMap.needsUpdate = true;
+  renderer.render(scene, camera);
+}
+renderer.setAnimationLoop(loop);
+</script>
+</body>
+</html>
