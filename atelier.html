@@ -593,7 +593,10 @@ async function setNight(on) {
 
 let mode = 'intro', activeCase = null, ringing = false;
 const ringAudio = new Audio('assets/sonnerie.mp3'); ringAudio.loop = true; ringAudio.preload = 'none';
-function stopRing() { if (ringing) { ringing = false; drawPhone(false); ringAudio.pause(); } }
+let ringWanted = false;
+function stopRing() { ringWanted = false; if (ringing) { ringing = false; drawPhone(false); ringAudio.pause(); } }
+// iOS Safari only allows sound from touchend or click, and the canvas tap comes through pointerup: retry there
+['touchend', 'click'].forEach(t => addEventListener(t, () => { if (ringWanted && ringAudio.paused) ringAudio.play().catch(() => {}); }, true));
 const ui = $('ui');
 const panels = { case: $('pCase'), offer: $('pOffer'), call: $('pCall') };
 function showPanel(name) { Object.entries(panels).forEach(([k, el]) => el.classList.toggle('hide', k !== name)); $('intro').classList.toggle('hide', !!name); }
@@ -634,14 +637,14 @@ function activate(p) {
   if (p.kind === 'case') { stopRing(); openCase(p.ci); }
   else if (p.kind === 'lamp') { if (!lampBusy) { lampBusy = true; setNight(!isNight).then(() => { lampBusy = false; }); } }
   else if (p.kind === 'offer') { stopRing(); if (activeCase) backToDesk(); mode = 'offer'; showPanel('offer'); curView = 'offer'; goView('offer', 1300); }
-  else if (p.kind === 'call') { if (activeCase) backToDesk(); mode = 'call'; if (!ringing) { ringAudio.currentTime = 0; ringAudio.play().catch(() => {}); } ringing = true; ringT0 = performance.now(); drawPhone(true); showPanel('call'); curView = 'call'; goView('call', 1300); }
+  else if (p.kind === 'call') { if (activeCase) backToDesk(); mode = 'call'; if (!ringing) { ringWanted = true; ringAudio.currentTime = 0; ringAudio.play().catch(() => {}); } ringing = true; ringT0 = performance.now(); drawPhone(true); showPanel('call'); curView = 'call'; goView('call', 1300); }
   else if (p.kind === 'mug') { steamBoost = 1; p.spin = 1; }
 }
 let ringT0 = 0;
 $('cBack').addEventListener('click', backToDesk);
 $('cNext').addEventListener('click', () => openCase(((activeCase ? activeCase.ci : -1) + 1) % CASES.length));
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', backToDesk));
-$('pCall').querySelectorAll('a').forEach(a => a.addEventListener('click', () => ringAudio.pause()));
+$('pCall').querySelectorAll('a').forEach(a => a.addEventListener('click', () => { ringWanted = false; ringAudio.pause(); }));
 addEventListener('keydown', e => { if (e.key === 'Escape' && mode !== 'intro' && mode !== 'desk') backToDesk(); });
 
 // POINTER
