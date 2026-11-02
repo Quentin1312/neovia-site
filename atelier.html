@@ -731,6 +731,8 @@ const FROM_DOOR = Q.get('from') === 'door';
 if (EMBED) { $('exit').style.display = 'flex'; $('exit').addEventListener('click', () => parent.postMessage('neovia:leave', '*')); }
 if (EMBED) {
   document.querySelector('.top').style.display = 'none';
+  // iOS Safari ignores tel: links opened from inside an iframe: open them from the top page
+  document.querySelectorAll('a[href^="tel:"]').forEach(a => { a.target = '_top'; });
   $('intro').querySelector('h1').textContent = 'Mon atelier, à Aurillac.';
   $('intro').querySelector('p').textContent = 'Cliquez sur les objets du bureau.';
 }
