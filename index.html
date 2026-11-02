@@ -424,7 +424,7 @@ class Component extends DCLogic {
       doorMsg('neovia:pause');
       setTimeout(() => {
         frame = document.createElement('iframe');
-        frame.src = 'atelier.html?embed=1' + (fromDoor ? '&from=door' : ''); frame.title = 'L’atelier Neovia en 3D';
+        frame.src = 'atelier.html?embed=1&v=3' + (fromDoor ? '&from=door' : ''); frame.title = 'L’atelier Neovia en 3D';
         frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;transition:opacity .6s ease;';
         frame.onload = () => { frame.style.opacity = 1; try { frame.contentWindow.focus(); } catch (_) {} setTimeout(() => { overlay.style.background = '#06171F'; }, 700); };
         overlay.appendChild(frame); busy = false;
@@ -593,7 +593,7 @@ class Component extends DCLogic {
       const db = doorwrap.getBoundingClientRect();
       const near = db.top < H * 2 && db.bottom > -H;
       if (near && !door) {
-        door = document.createElement('iframe'); door.src = 'porte.html'; door.title = 'La porte de l’atelier Neovia';
+        door = document.createElement('iframe'); door.src = 'porte.html?v=3'; door.title = 'La porte de l’atelier Neovia';
         door.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;'; doorwrap.appendChild(door);
       }
       const vis = db.top < H && db.bottom > 0 && !inDesk;
