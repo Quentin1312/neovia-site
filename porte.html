@@ -119,8 +119,8 @@ const panel = (x0, y0, x1, y1) => {
   flat(fx1 - fx0 + b, b, (fx0 + fx1) / 2, fy0, lineMat, zp + .0025, 'panel-shadow');
   flat(b, fy1 - fy0 + b, fx1, (fy0 + fy1) / 2, lineMat, zp + .0025, 'panel-shadow');
 };
-panel(.11, 1.2, DW - .11, 1.98); panel(.11, .26, DW - .11, 1.04);
-const hb = new THREE.Group(); hb.position.set(DW - .085, 1.12, .0225); door.add(hb);
+panel(.11, 1.142, DW - .11, 1.984); panel(.11, .14, DW - .11, .982);
+const hb = new THREE.Group(); hb.position.set(DW - .085, 1.062, .0225); door.add(hb);
 const rose = mk(new THREE.CylinderGeometry(.026, .026, .01, 36), M.brass, hb, 'rose'); rose.rotation.x = Math.PI / 2; rose.position.z = .005;
 const lever = new THREE.Group(); lever.position.z = .01; hb.add(lever);
 const neck = mk(new THREE.CylinderGeometry(.008, .008, .04, 18), M.brass, lever, 'neck'); neck.rotation.x = Math.PI / 2; neck.position.z = .018;
@@ -141,7 +141,7 @@ scene.add(key);
 
 // Quentin 3D, à droite de la porte
 var bub = $('bub'), mii = $('mii');
-const perso = makePerso(THREE); scene.add(perso.group);
+const perso = makePerso(THREE); perso.group.scale.setScalar(.93); scene.add(perso.group);
 const HOME = new THREE.Vector3(OW / 2 + CW + .38, 0, .32);
 const START = new THREE.Vector3(HOME.x + 2.6, 0, HOME.z + .7);
 perso.group.position.copy(START); perso.group.visible = false;
@@ -178,7 +178,7 @@ let state = 'idle';
 function frame() {
   const w = innerWidth, h = innerHeight, a = w / h; renderer.setSize(w, h, false); camera.aspect = a; camera.updateProjectionMatrix();
   const tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const d = Math.max(1.28 / tn, 1.32 / (tn * a));
+  const d = Math.max(1.38 / tn, 1.32 / (tn * a));
   if (state === 'idle') { camPos.set(.34, 1.22, d); camLook.set(.34, look.y, 0); }
   camera.position.copy(camPos); camera.lookAt(camLook); camera.updateMatrixWorld();
 }
