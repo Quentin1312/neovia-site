@@ -30,6 +30,16 @@ html,body{margin:0;height:100%;background:#fff;overflow:hidden;font-family:'Geis
 .lite .open{display:block}
 .tip{position:fixed;left:0;top:0;padding:8px 14px;border-radius:999px;background:#114255;color:#fff;font-size:14px;font-weight:500;white-space:nowrap;pointer-events:none;opacity:0;transform:translate(-50%,-150%);transition:opacity .2s}
 .flash{position:fixed;inset:0;background:#FFF6EA;opacity:0;pointer-events:none}
+.bub{position:fixed;left:0;top:0;padding:12px 18px;border-radius:20px 20px 20px 6px;background:#fff;color:#114255;font-size:clamp(15px,1.6vw,18px);font-weight:500;letter-spacing:-.01em;white-space:nowrap;box-shadow:0 14px 34px -12px rgba(17,66,85,.45),0 0 0 1px rgba(17,66,85,.08);pointer-events:none;opacity:0;transform-origin:0 100%;transition:opacity .3s ease,scale .4s cubic-bezier(.2,1.6,.4,1);scale:.7}
+.bub.on{opacity:1;scale:1}
+.bub b{font-weight:600}
+#mii{display:none!important}
+#mii{position:fixed;left:0;top:0;overflow:hidden;pointer-events:none}
+#mii .mh{position:absolute;left:0;bottom:0;width:62%;transform:translateX(-105%) rotate(14deg);transform-origin:20% 90%;transition:transform .8s cubic-bezier(.2,1.25,.4,1)}
+#mii.out .mh{transform:translateX(-24%) rotate(16deg)}
+#mii.hop .mh{transform:translateX(-24%) translateY(-6%) rotate(10deg)}
+#mii .mhd{position:absolute;left:46%;top:4%;width:22%;transform:translateX(-260%) rotate(-20deg);transform-origin:50% 95%;transition:transform .6s cubic-bezier(.3,1.5,.5,1) .15s}
+#mii.out .mhd{transform:translateX(0) rotate(-6deg)}
 </style>
 </head>
 <body>
@@ -37,8 +47,11 @@ html,body{margin:0;height:100%;background:#fff;overflow:hidden;font-family:'Geis
 <div class="tip" id="tip">Ouvrir</div>
 <button class="open" id="open" type="button">Ouvrir la porte</button>
 <div class="flash" id="flash"></div>
+<div id="mii" aria-hidden="true"><div class="mh"><svg viewBox="0 0 140 190" width="100%" style="display:block;overflow:visible;"><path d="M8 192 C10 162 36 148 70 148 C104 148 130 162 132 192 Z" fill="#8EC3D6"></path><path d="M50 150 Q70 164 90 150" stroke="#6AAAC0" stroke-width="5" fill="none" stroke-linecap="round"></path><rect x="59" y="128" width="22" height="26" rx="10" fill="#E9B998"></rect><ellipse cx="70" cy="74" rx="48" ry="46" fill="#4A2C1C"></ellipse><ellipse cx="25" cy="92" rx="8" ry="11" fill="#E9B998"></ellipse><ellipse cx="115" cy="92" rx="8" ry="11" fill="#E9B998"></ellipse><ellipse cx="70" cy="90" rx="44" ry="49" fill="#F3CDB2"></ellipse><path d="M24 84 C18 54 34 28 58 23 C64 13 82 12 92 20 C110 23 124 42 118 80 C114 68 107 62 98 60 C100 67 95 71 89 68 C85 61 79 57 71 59 C67 65 59 67 53 63 C47 67 39 67 35 62 C30 69 26 76 24 84 Z" fill="#5A3622"></path><path d="M50 26 C46 16 52 8 58 10 C56 16 58 20 62 22 Z M78 18 C80 8 90 6 94 10 C88 12 86 17 86 22 Z M98 26 C106 20 114 24 114 30 C108 28 104 30 102 34 Z M34 40 C26 36 24 28 28 24 C30 30 34 32 40 33 Z" fill="#5A3622"></path><rect x="43" y="74" width="18" height="5" rx="2.5" fill="#4A2C1C" transform="rotate(-5 52 76)"></rect><rect x="79" y="74" width="18" height="5" rx="2.5" fill="#4A2C1C" transform="rotate(5 88 76)"></rect><g data-eyes="1" style="transform-box:fill-box;transform-origin:center;"><ellipse cx="53" cy="91" rx="5.5" ry="7.5" fill="#1E1A18"></ellipse><ellipse cx="87" cy="91" rx="5.5" ry="7.5" fill="#1E1A18"></ellipse><circle cx="55" cy="88" r="2" fill="#fff"></circle><circle cx="89" cy="88" r="2" fill="#fff"></circle></g><ellipse cx="40" cy="107" rx="7.5" ry="4.5" fill="#F09A88" opacity=".45"></ellipse><ellipse cx="100" cy="107" rx="7.5" ry="4.5" fill="#F09A88" opacity=".45"></ellipse><path d="M69 97 Q74 102 69 106" stroke="#D49C7E" stroke-width="2.6" fill="none" stroke-linecap="round"></path><path d="M57 115 Q70 126 83 115" stroke="#9A4A3A" stroke-width="3.6" fill="none" stroke-linecap="round"></path></svg></div><div class="mhd"><svg viewBox="0 0 44 52" width="100%" style="display:block;overflow:visible;"><ellipse cx="23" cy="24" rx="16" ry="18" fill="#F3CDB2"></ellipse><ellipse cx="9" cy="32" rx="5.5" ry="8" fill="#F3CDB2" transform="rotate(-25 9 32)"></ellipse><rect x="13" y="38" width="20" height="16" rx="6" fill="#8EC3D6"></rect></svg></div></div>
+<div class="bub" id="bub"><b>Allez, viens !</b> Ouvre la porte.</div>
 <script type="module">
 import * as THREE from 'three';
+import { makePerso } from './neovia-perso.js';
 const $ = id => document.getElementById(id);
 const LITE = matchMedia('(pointer:coarse)').matches || innerWidth < 760;
 document.body.classList.toggle('lite', LITE);
@@ -110,13 +123,48 @@ key.shadow.mapSize.set(LITE ? 1024 : 2048, LITE ? 1024 : 2048); Object.assign(ke
 key.shadow.bias = -.001; key.shadow.normalBias = .03; key.shadow.radius = 6;
 scene.add(key);
 
+// Quentin 3D, à droite de la porte
+var bub = $('bub'), mii = $('mii');
+const perso = makePerso(THREE); scene.add(perso.group);
+const HOME = new THREE.Vector3(OW / 2 + CW + .38, 0, .32);
+const START = new THREE.Vector3(HOME.x + 2.6, 0, HOME.z + .7);
+perso.group.position.copy(START); perso.group.visible = false;
+const P = { shown: false, started: false, waveT: 0, walking: false };
+const anchor = new THREE.Vector3();
+function placeMii() {
+  anchor.set(perso.group.position.x, 1.86, perso.group.position.z).project(camera);
+  const x = (anchor.x * .5 + .5) * innerWidth, y = (-anchor.y * .5 + .5) * innerHeight;
+  bub.style.transform = `translate(${Math.max(10, Math.min(x - bub.offsetWidth * .15, innerWidth - bub.offsetWidth - 10))}px,${Math.max(10, y - bub.offsetHeight)}px)`;
+}
+function wave(ms) { if (state !== 'idle') return; perso.setMode('wave'); clearTimeout(P.waveT); P.waveT = setTimeout(() => { if (state === 'idle') perso.setMode('idle'); }, ms); }
+function miiOut() {
+  P.shown = true;
+  perso.onReady(async () => {
+    if (state !== 'idle') return;
+    if (perso.group.position.distanceTo(HOME) > .05) {
+      perso.group.position.copy(START); perso.group.visible = true; perso.face(HOME);
+      P.walking = true; perso.setMode('walk');
+      await walkTo(HOME.x, HOME.z, .95);
+      P.walking = false; if (state !== 'idle') return;
+      perso.setMode('idle'); await wait(350);
+    }
+    if (!P.waved) { P.waved = true; wave(3000); } setTimeout(() => { if (P.shown && state === 'idle') bub.classList.add('on'); }, 700);
+  });
+}
+function miiIn() { P.shown = false; bub.classList.remove('on'); }
+function arrive() { if (P.started) return; P.started = true; miiOut(); }
+new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) setTimeout(arrive, 500); }, { threshold: .5 }).observe($('gl'));
+
+
 // camera
 const look = new THREE.Vector3(0, 1.12, 0), camPos = new THREE.Vector3(), camLook = look.clone();
 let state = 'idle';
 function frame() {
   const w = innerWidth, h = innerHeight, a = w / h; renderer.setSize(w, h, false); camera.aspect = a; camera.updateProjectionMatrix();
   const tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  if (state === 'idle') { camPos.set(0, 1.25, Math.max(1.45 / tn, .95 / (tn * a))); camLook.copy(look); }
+  const d = Math.max(1.5 / tn, 1.32 / (tn * a));
+  if (state === 'idle') { camPos.set(.34, 1.22, d); camLook.set(.34, look.y, 0); }
+  camera.position.copy(camPos); camera.lookAt(camLook); camera.updateMatrixWorld();
 }
 addEventListener('resize', frame); frame();
 
@@ -125,14 +173,26 @@ const tweens = []; const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t
 const tween = (dur, fn, ease = eio) => new Promise(res => tweens.push({ t0: performance.now(), dur, fn, ease, res }));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 let ajar = 0;
-
+async function walkTo(x, z, speed) {
+  const p0 = perso.group.position.clone(), p1 = new THREE.Vector3(x, 0, z), dur = p0.distanceTo(p1) / speed * 1000;
+  await tween(dur, k => { perso.group.position.lerpVectors(p0, p1, k); perso.face(p1, .18); }, t => t);
+}
+async function walkIn() {
+  clearTimeout(P.waveT); P.walking = true; perso.group.visible = true; perso.setMode('walk');
+  await wait(250);
+  await walkTo(.12, .38, 1.15);
+  await walkTo(.02, -1.25, 1.2);
+  P.walking = false; perso.setMode('idle');
+}
 async function enter() {
-  if (state !== 'idle') return; state = 'opening';
+  if (state !== 'idle') return; state = 'opening'; bub.classList.remove('on');
   $('tip').style.opacity = 0; $('open').style.display = 'none'; document.body.style.cursor = 'default';
+  P.started = true; miiIn();
   await tween(260, k => { lever.rotation.z = .5 * k; });
   const a0 = hinge.rotation.y, p0 = camPos.clone(), l0 = camLook.clone();
   tween(1700, k => { hinge.rotation.y = a0 + (1.6 - a0) * k; interiorMat.color.setScalar(.6 + .6 * k); roomMat.color.copy(roomBase).multiplyScalar(.6 + .55 * k); spill.material.opacity = .55 * k; });
   tween(260, k => { lever.rotation.z = .5 * (1 - k); });
+  walkIn();
   await wait(700);
   const p1 = new THREE.Vector3(.08, 1.15, -.7), l1 = new THREE.Vector3(.08, 1.1, -3);
   tween(1800, k => { camPos.lerpVectors(p0, p1, k); camLook.lerpVectors(l0, l1, k); });
@@ -144,7 +204,9 @@ async function enter() {
 function reset() {
   state = 'idle'; tweens.length = 0; hinge.rotation.y = 0; lever.rotation.z = 0; ajar = 0;
   interiorMat.color.setScalar(.6); roomMat.color.copy(roomBase).multiplyScalar(.6); spill.material.opacity = 0; $('flash').style.opacity = 0; $('open').style.display = '';
+  perso.group.position.copy(START); perso.group.visible = false; P.walking = false; perso.setMode('idle');
   frame(); renderer.shadowMap.needsUpdate = true;
+  if (P.started) setTimeout(miiOut, 700);
 }
 let running = true, last = performance.now();
 addEventListener('message', e => {
@@ -184,7 +246,10 @@ function loop(now) {
   const par = state === 'idle' ? 1 : .2;
   camera.position.set(camPos.x + smx * .45 * par, camPos.y - smy * .2 * par, camPos.z);
   camera.lookAt(camLook);
-  if (tweens.length) renderer.shadowMap.needsUpdate = true;
+  perso.update(dt);
+  if (state === 'idle' && !P.walking) perso.face(camera.position, .06);
+  placeMii();
+  if (perso.ready) renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
 }
 renderer.setAnimationLoop(loop);

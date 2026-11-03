@@ -109,11 +109,11 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
 
   <div class="panel hide" id="pOffer">
     <button class="x" data-close="1" aria-label="Fermer">×</button>
-    <h2>L’offre</h2>
+    <h2>Mon offre</h2>
     <div style="display:flex;flex-direction:column;gap:2px"><p>à partir de</p><span class="price">490 €</span></div>
     <ul class="list">
       <li><span>Design</span><span>sur mesure</span></li>
-      <li><span>Rédaction</span><span>pensée pour Google</span></li>
+      <li><span>Textes</span><span>je vous fais des propositions</span></li>
       <li><span>Mise en ligne</span><span>je m’occupe de tout</span></li>
       <li><span>Domaine + hébergement</span><span>en plus, ~20 € la 1re année (OVH)</span></li>
       <li><span>Maintenance</span><span>sans surprise</span></li>
@@ -136,6 +136,7 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
 
 <script type="module">
 import * as THREE from 'three';
+import { makePerso } from './neovia-perso.js';
 const $ = id => document.getElementById(id);
 const Q = new URLSearchParams(location.search);
 const EMBED = Q.has('embed');
@@ -397,8 +398,8 @@ mk(new THREE.BoxGeometry(.15, .004, .21), M.kraft, book, 'cover-top').position.y
 mk(new THREE.BoxGeometry(.007, .0205, .2115), M.dark, book, 'elastic').position.set(.058, .0102, 0);
 {
   const c = cv(512, 220), x = c.getContext('2d'); x.fillStyle = '#F7F5EF'; x.fillRect(0, 0, 512, 220);
-  x.fillStyle = '#114255'; x.font = '500 92px Geist, sans-serif'; x.fillText('L’offre', 36, 112); x.font = '400 46px Geist, sans-serif'; x.fillText('dès 490 €', 38, 180);
-  const t = ctex(c); document.fonts && document.fonts.ready.then(() => { x.fillStyle = '#F7F5EF'; x.fillRect(0, 0, 512, 220); x.fillStyle = '#114255'; x.font = '500 92px Geist, sans-serif'; x.fillText('L’offre', 36, 112); x.font = '400 46px Geist, sans-serif'; x.fillText('dès 490 €', 38, 180); t.needsUpdate = true; });
+  x.fillStyle = '#114255'; x.font = '500 92px Geist, sans-serif'; x.fillText('Mon offre', 36, 112); x.font = '400 46px Geist, sans-serif'; x.fillText('dès 490 €', 38, 180);
+  const t = ctex(c); document.fonts && document.fonts.ready.then(() => { x.fillStyle = '#F7F5EF'; x.fillRect(0, 0, 512, 220); x.fillStyle = '#114255'; x.font = '500 92px Geist, sans-serif'; x.fillText('Mon offre', 36, 112); x.font = '400 46px Geist, sans-serif'; x.fillText('dès 490 €', 38, 180); t.needsUpdate = true; });
   const lab = new THREE.Mesh(new THREE.PlaneGeometry(.1, .043), new THREE.MeshStandardMaterial({ map: t, roughness: .9, name: 'label' })); lab.rotation.x = -Math.PI / 2; lab.position.set(-.012, .0202, -.04); lab.receiveShadow = true; book.add(lab);
 }
 const pencil = new THREE.Group(); pencil.position.set(.4, TOP + .0045, .13); pencil.rotation.set(0, -.5, Math.PI / 2); scene.add(pencil);
@@ -522,7 +523,7 @@ const picks = [
   { root: paint, kind: 'case', ci: 2, label: 'Arthur Richard' },
   { root: fidG, kind: 'case', ci: 3, label: 'fidèle.' },
   { root: lamp, kind: 'lamp', label: 'La lampe' },
-  { root: book, kind: 'offer', label: 'L’offre' },
+  { root: book, kind: 'offer', label: 'Mon offre' },
   { root: phone, kind: 'call', label: 'M’appeler' },
   { root: mug, kind: 'mug', label: 'Café' }
 ];
@@ -770,6 +771,28 @@ async function introDoor() {
 }
 Promise.all([logoImg, ...CASES.map(c => c.img)].map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; }))).then(FROM_DOOR ? introDoor : intro);
 
+// PERSO (peeks from behind the desk)
+const perso = makePerso(THREE); const PS = .62; perso.group.scale.setScalar(PS);
+const P_HIDE = TOP - 1.72 * PS - .05, P_PEEK = 1.13 - 1.72 * PS, P_Z = -.52;
+perso.group.position.set(.5, P_HIDE, P_Z); perso.group.scale.z = PS * .85; perso.group.visible = false; scene.add(perso.group);
+// only what rises above the desk top is drawn, so the legs never show under it
+renderer.localClippingEnabled = true;
+const deskClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TOP);
+perso.onReady(() => perso.group.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { m.clippingPlanes = [deskClip]; m.clipShadows = true; }); }));
+let persoBusy = false;
+async function peek(first) {
+  if (persoBusy || mode === 'intro' || !perso.ready) return; persoBusy = true;
+  const xs = [-.24, .48]; const x = xs[Math.random() * xs.length | 0];
+  perso.group.position.x = x; perso.group.rotation.y = 0; perso.face(camera.position); perso.group.visible = true;
+  perso.setMode('idle');
+  await tween(850, k => { perso.group.position.y = P_HIDE + (P_PEEK - P_HIDE) * k; }, t => 1 - Math.pow(1 - t, 3));
+  perso.setMode('wave'); await wait(2300);
+  await tween(600, k => { perso.group.position.y = P_PEEK + (P_HIDE - P_PEEK) * k; }, t => t * t * (3 - 2 * t));
+  perso.group.visible = false; persoBusy = false;
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+let peekT = performance.now() + 2500, firstPeek = true;
+
 // LOOP
 const tmpV = new THREE.Vector3();
 let last = performance.now();
@@ -820,6 +843,8 @@ renderer.setAnimationLoop(now => {
   }
 
   updateLive();
+  if (mode !== 'intro' && now > peekT && !persoBusy) { peek(firstPeek); firstPeek = false; peekT = now + 7000 + Math.random() * 5000; }
+  perso.update(dt, now); if (persoBusy && renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true;
   if (renderer.shadowMap.enabled && (tweens.length || activeCase || ringing || picks.some(p => p.hk > .002 || p.spin > 0))) renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
 });
