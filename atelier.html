@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>L’atelier 3D de Neovia, création de sites à Aurillac</title>
-<meta name="description" content="Visitez en 3D l’atelier de Neovia à Aurillac : découvrez mes réalisations, l’offre de création de site internet, ou appelez-moi.">
+<title>Le bureau 3D de Neovia, création de sites à Aurillac</title>
+<meta name="description" content="Visitez en 3D le bureau de Neovia à Aurillac : découvrez mes réalisations, l’offre de création de site internet, ou appelez-moi.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="assets/favicon.png">
 <style>@font-face{font-family:'Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url(/assets/fonts/geist.woff2) format('woff2')}</style>
@@ -89,7 +89,7 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
   </nav>
   <div class="intro fade" id="intro">
     <h1>Des sites qui font venir des clients.</h1>
-    <p>Bienvenue dans mon atelier à Aurillac. Cliquez sur les objets du bureau.</p>
+    <p>Bienvenue dans mon bureau à Aurillac. Cliquez sur les objets du bureau.</p>
     <div class="chips" id="chips"></div>
   </div>
   <div class="live" id="live"><img id="liveImg" alt=""></div>
@@ -733,7 +733,7 @@ if (EMBED) {
   document.querySelector('.top').style.display = 'none';
   // iOS Safari ignores tel: links opened from inside an iframe: open them from the top page
   document.querySelectorAll('a[href^="tel:"]').forEach(a => { a.target = '_top'; });
-  $('intro').querySelector('h1').textContent = 'Mon atelier, à Aurillac.';
+  $('intro').querySelector('h1').textContent = 'Mon bureau, à Aurillac.';
   $('intro').querySelector('p').textContent = 'Cliquez sur les objets du bureau.';
 }
 if (innerWidth < innerHeight) $('intro').querySelector('p').textContent = 'Glissez pour explorer, ou touchez un objet.';
@@ -775,9 +775,9 @@ Promise.all([logoImg, ...CASES.map(c => c.img)].map(i => i.complete ? 1 : new Pr
 const perso = makePerso(THREE); const PS = .62; perso.group.scale.setScalar(PS);
 const P_HIDE = TOP - 1.72 * PS - .05, P_PEEK = 1.13 - 1.72 * PS, P_Z = -.52;
 perso.group.position.set(.5, P_HIDE, P_Z); perso.group.scale.z = PS * .85; perso.group.visible = false; scene.add(perso.group);
-// only what rises above the desk top is drawn, so the legs never show under it
+// cut well below the desk top: the back edge hides the cut, and the legs never show under the desk
 renderer.localClippingEnabled = true;
-const deskClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TOP);
+const deskClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(TOP - .3));
 perso.onReady(() => perso.group.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { m.clippingPlanes = [deskClip]; m.clipShadows = true; }); }));
 let persoBusy = false;
 async function peek(first) {
