@@ -119,18 +119,7 @@ const panel = (x0, y0, x1, y1) => {
   flat(fx1 - fx0 + b, b, (fx0 + fx1) / 2, fy0, lineMat, zp + .0025, 'panel-shadow');
   flat(b, fy1 - fy0 + b, fx1, (fy0 + fy1) / 2, lineMat, zp + .0025, 'panel-shadow');
 };
-panel(.11, 1.2, DW - .11, 1.98); panel(.11, .14, DW - .11, 1.04);
-// small sign, in the site's blue
-const signC = cv(640, 200), sx = signC.getContext('2d'), signT = new THREE.CanvasTexture(signC);
-signT.colorSpace = THREE.SRGBColorSpace; signT.anisotropy = 8;
-const drawSign = () => {
-  sx.clearRect(0, 0, 640, 200); sx.fillStyle = '#114255'; sx.beginPath(); sx.roundRect(0, 0, 640, 200, 30); sx.fill();
-  sx.strokeStyle = 'rgba(255,255,255,.35)'; sx.lineWidth = 5; sx.beginPath(); sx.roundRect(16, 16, 608, 168, 18); sx.stroke();
-  sx.fillStyle = '#fff'; sx.font = "500 92px Geist, system-ui, sans-serif"; sx.textAlign = 'center'; sx.textBaseline = 'middle'; sx.fillText('Mon bureau', 320, 106); signT.needsUpdate = true;
-};
-drawSign(); document.fonts && document.fonts.load("500 92px Geist").then(drawSign);
-const sign = new THREE.Mesh(new THREE.PlaneGeometry(.29, .09), new THREE.MeshBasicMaterial({ map: signT, transparent: true, alphaTest: .5, toneMapped: false }));
-sign.name = 'sign'; sign.position.set(DW / 2, 2.046, .0225 + .004); door.add(sign);
+panel(.11, 1.2, DW - .11, 1.98); panel(.11, .26, DW - .11, 1.04);
 const hb = new THREE.Group(); hb.position.set(DW - .085, 1.12, .0225); door.add(hb);
 const rose = mk(new THREE.CylinderGeometry(.026, .026, .01, 36), M.brass, hb, 'rose'); rose.rotation.x = Math.PI / 2; rose.position.z = .005;
 const lever = new THREE.Group(); lever.position.z = .01; hb.add(lever);
@@ -189,7 +178,7 @@ let state = 'idle';
 function frame() {
   const w = innerWidth, h = innerHeight, a = w / h; renderer.setSize(w, h, false); camera.aspect = a; camera.updateProjectionMatrix();
   const tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const d = Math.max(1.5 / tn, 1.32 / (tn * a));
+  const d = Math.max(1.28 / tn, 1.32 / (tn * a));
   if (state === 'idle') { camPos.set(.34, 1.22, d); camLook.set(.34, look.y, 0); }
   camera.position.copy(camPos); camera.lookAt(camLook); camera.updateMatrixWorld();
 }
