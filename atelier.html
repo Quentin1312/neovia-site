@@ -846,7 +846,7 @@ function sayFor(p, wasNight, lampFree) {
 }
 function placeSay() {
   if (!sayEl.classList.contains('on')) return;
-  const W = innerWidth, H = innerHeight, b = sayEl.offsetWidth, h = sayEl.offsetHeight, minY = isPortrait() ? 116 : 16;
+  const W = innerWidth, H = innerHeight, b = sayEl.offsetWidth, h = sayEl.offsetHeight, minY = isPortrait() ? 116 : 80; // stays under the site menu
   let x = (W - b) / 2, y = minY;
   if (sayAnchored && perso.group.visible) {
     sayHead.set(perso.group.position.x, perso.group.position.y + 1.1, perso.group.position.z).project(camera);
