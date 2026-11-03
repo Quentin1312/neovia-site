@@ -75,6 +75,8 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
 .err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:18px}
 @media (max-width:640px){.panel{right:12px;left:12px;bottom:12px;width:auto;padding:18px;gap:10px;border-radius:20px}.panel h2{font-size:28px}.panel p{font-size:15px}.list li{padding:8px 0;font-size:15px}.price{font-size:52px}.intro{bottom:20px}.intro h1{font-size:32px}.exit{top:72px;left:12px;right:auto;bottom:auto;padding:9px 14px;font-size:14px}}
 .chips{display:none}
+.say{position:absolute;left:0;top:0;z-index:6;max-width:min(280px,calc(100vw - 24px));padding:11px 15px;border-radius:18px;background:#fff;color:#114255;font-size:15px;font-weight:500;line-height:1.3;letter-spacing:-.01em;box-shadow:0 14px 34px -14px rgba(0,0,0,.6);pointer-events:none!important;opacity:0;transition:opacity .2s ease}
+.say.on{opacity:1}
 @media (max-aspect-ratio:1/1){.intro{right:0;left:0;max-width:none;padding:0 18px;box-sizing:border-box}.chips{display:flex;gap:8px;overflow-x:auto;pointer-events:auto;margin:0 -18px;padding:2px 18px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{all:unset;flex:none;cursor:pointer;padding:10px 15px;border-radius:999px;background:rgba(255,255,255,.95);color:#114255;font-size:14px;font-weight:500;white-space:nowrap}}
 @media (pointer:coarse){.hs{width:44px;height:44px;margin:-22px 0 0 -22px}.hs::before{inset:16px}.hs::after{inset:10px}.tip{display:none}}
 </style>
@@ -95,6 +97,7 @@ a{color:#fff;text-decoration:none}a:hover{color:#A9D4E2}
   <div class="live" id="live"><img id="liveImg" alt=""></div>
   <div id="hss"></div>
   <button class="exit" id="exit">Revenir au site →</button>
+  <div class="say" id="say" aria-live="polite"></div>
   <div class="tip" id="tip"></div>
 
   <div class="panel hide" id="pCase">
@@ -644,11 +647,13 @@ function backToDesk() {
 function activate(p) {
   if (mode === 'intro') return;
   hideTip();
+  const wasNight = isNight, lampFree = !lampBusy;
   if (p.kind === 'case') { stopRing(); openCase(p.ci); }
   else if (p.kind === 'lamp') { if (!lampBusy) { lampBusy = true; setNight(!isNight).then(() => { lampBusy = false; }); } }
   else if (p.kind === 'offer') { stopRing(); if (activeCase) backToDesk(); mode = 'offer'; showPanel('offer'); curView = 'offer'; goView('offer', 1300); }
   else if (p.kind === 'call') { if (activeCase) backToDesk(); mode = 'call'; if (!ringing) { ringWanted = true; ringAudio.currentTime = 0; ringAudio.play().catch(() => {}); } ringing = true; ringT0 = performance.now(); drawPhone(true); showPanel('call'); curView = 'call'; goView('call', 1300); }
   else if (p.kind === 'mug') { steamBoost = 1; p.spin = 1; }
+  sayFor(p, wasNight, lampFree);
 }
 let ringT0 = 0;
 $('cBack').addEventListener('click', backToDesk);
@@ -728,7 +733,7 @@ function updateLive() {
 
 // EMBED
 const FROM_DOOR = Q.get('from') === 'door';
-if (EMBED) { $('exit').style.display = 'flex'; $('exit').addEventListener('click', () => parent.postMessage('neovia:leave', '*')); }
+if (EMBED) { $('exit').style.display = 'flex'; let leaving = false; $('exit').addEventListener('click', () => { if (leaving) return; leaving = true; persoSay('Déjà ? Bon, je retourne bosser.', 1200); setTimeout(() => { leaving = false; sayEl.classList.remove('on'); parent.postMessage('neovia:leave', '*'); }, 1200); }); }
 if (EMBED) {
   document.querySelector('.top').style.display = 'none';
   // iOS Safari ignores tel: links opened from inside an iframe: open them from the top page
@@ -780,18 +785,75 @@ renderer.localClippingEnabled = true;
 const deskClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(TOP - .3));
 perso.onReady(() => perso.group.traverse(o => { if (o.isMesh) [].concat(o.material).forEach(m => { m.clippingPlanes = [deskClip]; m.clipShadows = true; }); }));
 let persoBusy = false;
-async function peek(first) {
+async function peek(fx) {
   if (persoBusy || mode === 'intro' || !perso.ready) return; persoBusy = true;
-  const xs = [-.24, .48]; const x = xs[Math.random() * xs.length | 0];
+  const xs = [-.24, .48]; const x = typeof fx === 'number' ? fx : xs[Math.random() * xs.length | 0];
   perso.group.position.x = x; perso.group.rotation.y = 0; perso.face(camera.position); perso.group.visible = true;
   perso.setMode('idle');
   await tween(850, k => { perso.group.position.y = P_HIDE + (P_PEEK - P_HIDE) * k; }, t => 1 - Math.pow(1 - t, 3));
-  perso.setMode('wave'); await wait(2300);
+  perso.setMode('wave'); holdUntil = Math.max(holdUntil, performance.now() + 2300);
+  while (performance.now() < holdUntil) await wait(100);
   await tween(600, k => { perso.group.position.y = P_PEEK + (P_HIDE - P_PEEK) * k; }, t => t * t * (3 - 2 * t));
   perso.group.visible = false; persoBusy = false;
 }
 const wait = ms => new Promise(r => setTimeout(r, ms));
-let peekT = performance.now() + 2500, firstPeek = true;
+let peekT = performance.now() + 2500, holdUntil = 0;
+
+// PHRASES (a speech bubble on each object, no extra animation)
+const LINES = {
+  cake: ['Touche pas, celui-là il est à moi.', 'J’ai dit non.', 'Bon, une part. Mais c’est 490 €.'],
+  pop: ['Sers-toi, j’en ai fait pour deux.'],
+  paint: ['Attention, c’est encore frais !'],
+  fid: ['Encore 4 passages et t’as un café.'],
+  offer: ['Oui, c’est vraiment 490 €. Non, y a pas de piège.'],
+  call: ['Décroche, c’est peut-être toi !'],
+  mug: ['C’est mon 4e. Je vais très bien.', 'C’est mon 5e. Tout va bien.', 'Arrête, je vais plus dormir.']
+};
+const IDLE_LINES = ['Tu cherches quelque chose ? Le téléphone est à droite.', 'Tu peux toucher, hein. Ça mord pas.', 'Je reste là. J’ai le temps.'];
+const CASE_KEYS = ['cake', 'pop', 'paint', 'fid'];
+const sayEl = $('say'), sayCount = {}, sayHead = new THREE.Vector3();
+let sayTimer = 0, sayAnchored = false, lastAct = performance.now(), idleSaid = 0, lampClicks = 0, lampClickT = 0;
+addEventListener('pointerdown', () => { lastAct = performance.now(); }, true);
+const isPortrait = () => innerWidth < innerHeight;
+// where he can pop up and stay in frame for the current view; null: bubble alone
+function sayX() {
+  const v = curView, tall = isPortrait();
+  if (v === 'case') return tall ? null : .42;
+  if (v === 'offer' || v === 'call') return null; // camera looks down at the desk, he would be cut off
+  if (tall) return pan + (pan > 0 ? -.2 : .2);
+  return [-.24, .48][Math.random() * 2 | 0];
+}
+function persoSay(text, dur = 3000) {
+  sayEl.textContent = text; sayEl.classList.add('on');
+  clearTimeout(sayTimer); sayTimer = setTimeout(() => sayEl.classList.remove('on'), dur);
+  lastAct = performance.now(); peekT = lastAct + 9000; holdUntil = lastAct + dur;
+  const x = sayX();
+  if (persoBusy) { sayAnchored = x !== null && perso.group.visible; return; }
+  sayAnchored = x !== null && perso.ready && mode !== 'intro';
+  if (sayAnchored) peek(x);
+}
+function sayFor(p, wasNight, lampFree) {
+  if (p.kind === 'lamp') {
+    if (!lampFree) return;
+    const t = performance.now(); lampClicks = t - lampClickT < 8000 ? lampClicks + 1 : 1; lampClickT = t;
+    persoSay(lampClicks >= 4 ? 'C’est pas une boîte de nuit ici.' : wasNight ? 'Hé ! Je bossais, moi !' : 'Merci.');
+    return;
+  }
+  const key = p.kind === 'case' ? CASE_KEYS[p.ci] : p.kind;
+  const lines = LINES[key]; if (!lines) return;
+  const n = sayCount[key] = (sayCount[key] || 0) + 1;
+  persoSay(lines[Math.min(n, lines.length) - 1]);
+}
+function placeSay() {
+  if (!sayEl.classList.contains('on')) return;
+  const W = innerWidth, H = innerHeight, b = sayEl.offsetWidth, h = sayEl.offsetHeight, minY = isPortrait() ? 116 : 16;
+  let x = (W - b) / 2, y = minY;
+  if (sayAnchored && perso.group.visible) {
+    sayHead.set(perso.group.position.x, perso.group.position.y + 1.1, perso.group.position.z).project(camera);
+    x = (sayHead.x * .5 + .5) * W - b / 2; y = (-sayHead.y * .5 + .5) * H - h - 6;
+  }
+  sayEl.style.transform = `translate(${Math.round(Math.max(12, Math.min(x, W - b - 12)))}px,${Math.round(Math.max(minY, Math.min(y, H - h - 12)))}px)`;
+}
 
 // LOOP
 const tmpV = new THREE.Vector3();
@@ -843,7 +905,9 @@ renderer.setAnimationLoop(now => {
   }
 
   updateLive();
-  if (mode !== 'intro' && now > peekT && !persoBusy) { peek(firstPeek); firstPeek = false; peekT = now + 7000 + Math.random() * 5000; }
+  if (mode !== 'intro' && now > peekT && !persoBusy) { peek(); peekT = now + 7000 + Math.random() * 5000; }
+  if (mode === 'desk' && idleSaid < IDLE_LINES.length && !persoBusy && now - lastAct > 20000) persoSay(IDLE_LINES[idleSaid++]);
+  placeSay();
   perso.update(dt, now); if (persoBusy && renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true;
   if (renderer.shadowMap.enabled && (tweens.length || activeCase || ringing || picks.some(p => p.hk > .002 || p.spin > 0))) renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
