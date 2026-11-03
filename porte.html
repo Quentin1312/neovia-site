@@ -56,7 +56,7 @@ const $ = id => document.getElementById(id);
 const LITE = matchMedia('(pointer:coarse)').matches || innerWidth < 760;
 document.body.classList.toggle('lite', LITE);
 const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true });
-renderer.setPixelRatio(Math.min(LITE ? 1 : 1.25, devicePixelRatio));
+renderer.setPixelRatio(Math.min(LITE ? 2 : 1.25, devicePixelRatio));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
 renderer.toneMapping = THREE.NeutralToneMapping;
@@ -99,12 +99,39 @@ box(OW + CW * 2, CW, FD, M.frame, 0, OH + CW / 2, -FD / 2 + .02, scene, 'frame-h
 const hinge = new THREE.Group(); hinge.position.set(-DW / 2, 0, -.03); scene.add(hinge);
 const door = new THREE.Group(); hinge.add(door);
 box(DW, DH, .045, M.door, DW / 2, .012 + DH / 2, 0, door, 'slab');
-const mold = (x0, y0, x1, y1) => {
-  const t = .014, z = .0225 + t / 2;
-  [[x0, y0, x1, y0 + t], [x0, y1 - t, x1, y1], [x0, y0, x0 + t, y1], [x1 - t, y0, x1, y1]].forEach(([a, b, c, d]) => box(c - a, d - b, t, M.door, (a + c) / 2, (b + d) / 2, z, door, 'molding'));
+// raised frames around recessed panels: darker panel and inner shadow lines so they read on a white door
+const panelMat = new THREE.MeshStandardMaterial({ color: '#F0F3F4', roughness: .55, name: 'panel' });
+const lineMat = new THREE.MeshBasicMaterial({ color: '#B4BFC4', name: 'panel-shadow' });
+const lightMat = new THREE.MeshBasicMaterial({ color: '#FFFFFF', name: 'panel-light' });
+const panel = (x0, y0, x1, y1) => {
+  const t = .03, h = .02, z = .0225 + h / 2, zp = .0225, l = .012;
+  [[x0, y0, x1, y0 + t], [x0, y1 - t, x1, y1], [x0, y0, x0 + t, y1], [x1 - t, y0, x1, y1]].forEach(([a, b, c, d]) => box(c - a, d - b, h, M.door, (a + c) / 2, (b + d) / 2, z, door, 'molding'));
+  const ix0 = x0 + t, iy0 = y0 + t, ix1 = x1 - t, iy1 = y1 - t, flat = (w, ht, x, y, m, zz, name) => { const o = new THREE.Mesh(new THREE.PlaneGeometry(w, ht), m); o.position.set(x, y, zz); o.name = name; o.receiveShadow = true; door.add(o); };
+  flat(ix1 - ix0, iy1 - iy0, (ix0 + ix1) / 2, (iy0 + iy1) / 2, panelMat, zp + .001, 'panel');
+  flat(ix1 - ix0, l, (ix0 + ix1) / 2, iy1 - l / 2, lineMat, zp + .002, 'panel-shadow');
+  flat(l, iy1 - iy0, ix0 + l / 2, (iy0 + iy1) / 2, lineMat, zp + .002, 'panel-shadow');
+  flat(ix1 - ix0, l * .6, (ix0 + ix1) / 2, iy0 + l * .3, lightMat, zp + .002, 'panel-light');
+  flat(l * .6, iy1 - iy0, ix1 - l * .3, (iy0 + iy1) / 2, lightMat, zp + .002, 'panel-light');
+  // fielded centre, lit from the top left
+  const f = .055, fx0 = ix0 + f, fy0 = iy0 + f, fx1 = ix1 - f, fy1 = iy1 - f, b = .006;
+  flat(fx1 - fx0, b, (fx0 + fx1) / 2, fy1, lightMat, zp + .0025, 'panel-light');
+  flat(b, fy1 - fy0, fx0, (fy0 + fy1) / 2, lightMat, zp + .0025, 'panel-light');
+  flat(fx1 - fx0 + b, b, (fx0 + fx1) / 2, fy0, lineMat, zp + .0025, 'panel-shadow');
+  flat(b, fy1 - fy0 + b, fx1, (fy0 + fy1) / 2, lineMat, zp + .0025, 'panel-shadow');
 };
-mold(.11, 1.2, DW - .11, 1.98); mold(.11, .14, DW - .11, 1.04);
-const hb = new THREE.Group(); hb.position.set(DW - .085, 1.0, .0225); door.add(hb);
+panel(.11, 1.2, DW - .11, 1.98); panel(.11, .14, DW - .11, 1.04);
+// small sign, in the site's blue
+const signC = cv(640, 200), sx = signC.getContext('2d'), signT = new THREE.CanvasTexture(signC);
+signT.colorSpace = THREE.SRGBColorSpace; signT.anisotropy = 8;
+const drawSign = () => {
+  sx.clearRect(0, 0, 640, 200); sx.fillStyle = '#114255'; sx.beginPath(); sx.roundRect(0, 0, 640, 200, 30); sx.fill();
+  sx.strokeStyle = 'rgba(255,255,255,.35)'; sx.lineWidth = 5; sx.beginPath(); sx.roundRect(16, 16, 608, 168, 18); sx.stroke();
+  sx.fillStyle = '#fff'; sx.font = "500 92px Geist, system-ui, sans-serif"; sx.textAlign = 'center'; sx.textBaseline = 'middle'; sx.fillText('Mon bureau', 320, 106); signT.needsUpdate = true;
+};
+drawSign(); document.fonts && document.fonts.load("500 92px Geist").then(drawSign);
+const sign = new THREE.Mesh(new THREE.PlaneGeometry(.29, .09), new THREE.MeshBasicMaterial({ map: signT, transparent: true, alphaTest: .5, toneMapped: false }));
+sign.name = 'sign'; sign.position.set(DW / 2, 2.046, .0225 + .004); door.add(sign);
+const hb = new THREE.Group(); hb.position.set(DW - .085, 1.12, .0225); door.add(hb);
 const rose = mk(new THREE.CylinderGeometry(.026, .026, .01, 36), M.brass, hb, 'rose'); rose.rotation.x = Math.PI / 2; rose.position.z = .005;
 const lever = new THREE.Group(); lever.position.z = .01; hb.add(lever);
 const neck = mk(new THREE.CylinderGeometry(.008, .008, .04, 18), M.brass, lever, 'neck'); neck.rotation.x = Math.PI / 2; neck.position.z = .018;
